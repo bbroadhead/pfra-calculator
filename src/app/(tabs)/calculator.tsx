@@ -496,7 +496,12 @@ export default function CalculatorScreen() {
   const [summaryHeight, setSummaryHeight] = useState(0);
   const { width } = useWindowDimensions();
   const isWide = width >= 1100;
+  /*
   const contentMaxWidth = Math.min(Math.max(width - 24, 320), 1180);
+  const jumpOffset = isWide ? 16 : summaryHeight + 16;
+  */
+  const contentMaxWidth = isWide ? 1180 : width;
+  const horizontalPadding = isWide ? 12 : 0;
   const jumpOffset = isWide ? 16 : summaryHeight + 16;
 
   const setSectionY = (key: 'metrics' | 'bodycomp' | 'strength' | 'core' | 'cardio') => (event: LayoutChangeEvent) => {
@@ -628,14 +633,14 @@ export default function CalculatorScreen() {
           stickyHeaderIndices={isWide ? undefined : [1]}
         >
           <View style={{ width: '100%', alignItems: 'center' }}>
-            <View style={{ width: '100%', maxWidth: contentMaxWidth }} className="px-6 pt-4 pb-2">
+            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: horizontalPadding }} className="px-6 pt-4 pb-2">
               <Text className="text-2xl font-bold text-white">PFRA Calculator</Text>
               <Text className="mt-1 text-sm text-af-silver">Based on PFRA Scoring Charts released on 1 MAR 2026</Text>
             </View>
 
             <View
               onLayout={(event) => setSummaryHeight(event.nativeEvent.layout.height)}
-              style={{ width: '100%', maxWidth: contentMaxWidth }}
+              style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: horizontalPadding }}
               className="px-6 pt-2 pb-2"
             >
               <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 16, alignItems: 'stretch' }}>
@@ -693,7 +698,7 @@ export default function CalculatorScreen() {
               </View>
             </View>
 
-            <View style={{ width: '100%', maxWidth: contentMaxWidth }} className="px-6">
+            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: horizontalPadding }} className="px-6">
               {!isWide ? <AudioPanel disableSwipe={disableSwipe} enableSwipe={enableSwipe} containerClassName="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4" /> : null}
 
               {isWide ? (
