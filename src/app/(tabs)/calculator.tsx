@@ -274,7 +274,7 @@ function SegmentedOption({ selected, label, onPress, theme }: { selected: boolea
   );
 }
 
-function AudioPanel({ disableSwipe, enableSwipe, containerClassName = 'mx-6 mt-6 rounded-2xl border border-white/10 bg-white/5 p-4', containerStyle }: { disableSwipe: () => void; enableSwipe: () => void; containerClassName?: string; containerStyle?: any; }) {
+function AudioPanel({ disableSwipe, enableSwipe, containerClassName = 'mx-6 mt-6 rounded-2xl border border-white/10 bg-white/5 p-4', containerStyle, bare = false, titleVisible = true }: { disableSwipe: () => void; enableSwipe: () => void; containerClassName?: string; containerStyle?: any; bare?: boolean; titleVisible?: boolean; }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [positionSec, setPositionSec] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
@@ -421,10 +421,8 @@ function AudioPanel({ disableSwipe, enableSwipe, containerClassName = 'mx-6 mt-6
     }
   };
 
-  return (
-    <View className={containerClassName} style={containerStyle}>
-      <Text className="mb-3 text-lg font-semibold text-white">20m HAMR Audio</Text>
-
+  const controls = (
+    <>
       {Platform.OS === 'web' ? (
         // eslint-disable-next-line jsx-a11y/media-has-caption
         <audio
@@ -485,6 +483,17 @@ function AudioPanel({ disableSwipe, enableSwipe, containerClassName = 'mx-6 mt-6
           <Ionicons name="download-outline" size={16} color="#FFFFFF" />
         </Pressable>
       </View>
+    </>
+  );
+
+  if (bare) {
+    return controls;
+  }
+
+  return (
+    <View className={containerClassName} style={containerStyle}>
+      {titleVisible ? <Text className="mb-3 text-lg font-semibold text-white">20m HAMR Audio</Text> : null}
+      {controls}
     </View>
   );
 }
@@ -495,13 +504,9 @@ export default function CalculatorScreen() {
   const sectionYRef = useRef<Record<'metrics' | 'bodycomp' | 'strength' | 'core' | 'cardio', number>>({ metrics: 0, bodycomp: 0, strength: 0, core: 0, cardio: 0 });
   const [summaryHeight, setSummaryHeight] = useState(0);
   const { width } = useWindowDimensions();
-  const isWide = width >= 1200;
-  /*
-  const contentMaxWidth = Math.min(Math.max(width - 24, 320), 1180);
-  const jumpOffset = isWide ? 16 : summaryHeight + 16;
-  */
-  const contentMaxWidth = isWide ? 1180 : width;
-  const horizontalPadding = isWide ? 12 : 0;
+  const isWide = width >= 1280;
+  const contentMaxWidth = isWide ? 1460 : undefined;
+  const summaryMaxWidth = isWide ? 460 : undefined;
   const jumpOffset = isWide ? 16 : summaryHeight + 16;
 
   const setSectionY = (key: 'metrics' | 'bodycomp' | 'strength' | 'core' | 'cardio') => (event: LayoutChangeEvent) => {
@@ -517,6 +522,7 @@ export default function CalculatorScreen() {
   const disableSwipe = () => tabSwipe?.setSwipeEnabled(false);
   const enableSwipe = () => tabSwipe?.setSwipeEnabled(true);
 
+  const [audioCollapsed, setAudioCollapsed] = useState(true);
   const [ageYears, setAgeYears] = useState(34);
   const [gender, setGender] = useState<Gender>('male');
 
@@ -615,6 +621,103 @@ export default function CalculatorScreen() {
   const progress = officialTotal === null ? 0 : clamp(officialTotal / 100, 0, 1);
   const dashOffset = circumference * (1 - progress);
 
+  const renderAudioCard = (className = '', style?: any) => (
+    <View className={className} style={style}>
+      <View className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <Pressable onPress={() => setAudioCollapsed((prev) => !prev)} className="flex-row items-center justify-between">
+          <Text className="text-lg font-semibold text-white">20m HAMR Audio</Text>
+          <Ionicons name={audioCollapsed ? 'chevron-down' : 'chevron-up'} size={20} color="#FFFFFF" />
+        </Pressable>
+        {!audioCollapsed ? <View className="mt-4"><AudioPanel disableSwipe={disableSwipe} enableSwipe={enableSwipe} bare titleVisible={false} /></View> : null}
+      </View>
+    </View>
+  );
+
+  const metricsCard = (
+    <View onLayout={setSectionY('metrics')} className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.whtR.soft, borderColor: THEMES.whtR.border }}>
+      <Text className="mb-4 text-lg font-semibold text-white">Metrics</Text>
+      <LabeledSlider label="Age" valueLabel={`${ageYears} years`} theme={THEMES.whtR} input={<BoundNumberField value={ageYears} onChange={(v) => setAgeYears(Math.round(v))} min={17} max={65} step={1} />}>
+        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={ageYears} onValueChange={(v) => setAgeYears(Math.round(v as number))} minimumValue={17} maximumValue={65} step={1} />
+      </LabeledSlider>
+      <View className="rounded-lg bg-white/10 p-1 flex-row">
+        <SegmentedOption selected={gender === 'male'} label="Male" onPress={() => setGender('male')} theme={THEMES.whtR} />
+        <SegmentedOption selected={gender === 'female'} label="Female" onPress={() => setGender('female')} theme={THEMES.whtR} />
+      </View>
+    </View>
+  );
+
+  const bodyCompCard = (
+    <View onLayout={setSectionY('bodycomp')} className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.whtR.soft, borderColor: THEMES.whtR.border }}>
+      <View className="mb-4"><Text className="text-lg font-semibold text-white">Body Composition</Text></View>
+      <MetricRow label="WHtR" value={whtrValue.toFixed(2)} />
+      <LabeledSlider label="Waist" valueLabel={`${waistIn.toFixed(1)} in • score ${scores.waist.toFixed(1)}/20`} theme={THEMES.whtR} input={<BoundNumberField value={waistIn} onChange={setWaistIn} min={20} max={60} step={0.5} decimals={1} className="min-w-[64px] px-2.5" />} markers={waistMarkers} markerMin={20} markerMax={60}>
+        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={waistIn} onValueChange={(v) => setWaistIn(Number(v))} minimumValue={20} maximumValue={60} step={0.5} />
+      </LabeledSlider>
+      <LabeledSlider label="Height" valueLabel={`${heightIn.toFixed(1)} in`} theme={THEMES.whtR} input={<BoundNumberField value={heightIn} onChange={setHeightIn} min={48} max={84} step={0.5} decimals={1} className="min-w-[68px] px-2.5" />}>
+        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={heightIn} onValueChange={(v) => setHeightIn(Number(v))} minimumValue={48} maximumValue={84} step={0.5} />
+      </LabeledSlider>
+    </View>
+  );
+
+  const strengthCard = (
+    <View onLayout={setSectionY('strength')} className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.strength.soft, borderColor: THEMES.strength.border }}>
+      <Text className="mb-4 text-lg font-semibold text-white">Strength</Text>
+      <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
+        <SegmentedOption selected={strengthTest === 'pushups'} label="Push-ups" onPress={() => setStrengthTest('pushups')} theme={THEMES.strength} />
+        <SegmentedOption selected={strengthTest === 'hand_release_pushups'} label="Hand-release" onPress={() => setStrengthTest('hand_release_pushups')} theme={THEMES.strength} />
+      </View>
+      <LabeledSlider label="Reps" valueLabel={`${pushupReps} reps`} theme={THEMES.strength} input={<BoundNumberField value={pushupReps} onChange={(v) => setPushupReps(Math.round(v))} min={0} max={100} step={1} />} markers={strengthMarkers} markerMin={0} markerMax={100}>
+        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={pushupReps} onValueChange={(v) => setPushupReps(Math.round(v as number))} minimumValue={0} maximumValue={100} step={1} />
+      </LabeledSlider>
+    </View>
+  );
+
+  const coreCard = (
+    <View onLayout={setSectionY('core')} className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.core.soft, borderColor: THEMES.core.border }}>
+      <Text className="mb-4 text-lg font-semibold text-white">Core</Text>
+      <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
+        <SegmentedOption selected={coreTest === 'situps'} label="Sit-ups" onPress={() => setCoreTest('situps')} theme={THEMES.core} />
+        <SegmentedOption selected={coreTest === 'cross_leg_reverse_crunch'} label="Cross-leg" onPress={() => setCoreTest('cross_leg_reverse_crunch')} theme={THEMES.core} />
+        <SegmentedOption selected={coreTest === 'plank'} label="Plank" onPress={() => setCoreTest('plank')} theme={THEMES.core} />
+      </View>
+      {coreTest === 'plank' ? (
+        <LabeledSlider label="Time" valueLabel={formatMMSS(plankSec)} theme={THEMES.core} input={<BoundTimeField valueSec={plankSec} onChange={setPlankSec} minSec={0} maxSec={300} />} markers={coreMarkers} markerMin={0} markerMax={300}>
+          <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={plankSec} onValueChange={(v) => setPlankSec(Math.round(v as number))} minimumValue={0} maximumValue={300} step={1} />
+        </LabeledSlider>
+      ) : (
+        <LabeledSlider label="Reps" valueLabel={`${coreReps} reps`} theme={THEMES.core} input={<BoundNumberField value={coreReps} onChange={(v) => setCoreReps(Math.round(v))} min={0} max={100} step={1} />} markers={coreMarkers} markerMin={0} markerMax={100}>
+          <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={coreReps} onValueChange={(v) => setCoreReps(Math.round(v as number))} minimumValue={0} maximumValue={100} step={1} />
+        </LabeledSlider>
+      )}
+    </View>
+  );
+
+  const cardioCard = (
+    <View onLayout={setSectionY('cardio')} className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.cardio.soft, borderColor: THEMES.cardio.border }}>
+      <Text className="mb-4 text-lg font-semibold text-white">Cardio</Text>
+      <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
+        <SegmentedOption selected={cardioTest === 'run_2mile'} label="2-mile Run" onPress={() => setCardioTest('run_2mile')} theme={THEMES.cardio} />
+        <SegmentedOption selected={cardioTest === 'hamr_20m'} label="HAMR" onPress={() => setCardioTest('hamr_20m')} theme={THEMES.cardio} />
+        <SegmentedOption selected={cardioTest === 'walk_2k'} label="2km Walk" onPress={() => setCardioTest('walk_2k')} theme={THEMES.cardio} />
+      </View>
+      {cardioTest === 'run_2mile' && (
+        <LabeledSlider label="2-mile time" valueLabel={formatMMSS(runSec)} theme={THEMES.cardio} input={<BoundTimeField valueSec={runSec} onChange={setRunSec} minSec={8 * 60} maxSec={30 * 60} />} markers={runMarkers} markerMin={8 * 60} markerMax={30 * 60}>
+          <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={runSec} onValueChange={(v) => setRunSec(Math.round(v as number))} minimumValue={8 * 60} maximumValue={30 * 60} step={1} />
+        </LabeledSlider>
+      )}
+      {cardioTest === 'walk_2k' && (
+        <LabeledSlider label="2K walk maximum time" valueLabel={`${formatMMSS(walkSec)} • pass/fail only`} theme={THEMES.cardio} input={<BoundTimeField valueSec={walkSec} onChange={setWalkSec} minSec={10 * 60} maxSec={30 * 60} />} markers={walkMarkers} markerMin={10 * 60} markerMax={30 * 60}>
+          <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={walkSec} onValueChange={(v) => setWalkSec(Math.round(v as number))} minimumValue={10 * 60} maximumValue={30 * 60} step={1} />
+        </LabeledSlider>
+      )}
+      {cardioTest === 'hamr_20m' && (
+        <LabeledSlider label="HAMR shuttles" valueLabel={`${hamrShuttles} shuttles`} theme={THEMES.cardio} input={<BoundNumberField value={hamrShuttles} onChange={(v) => setHamrShuttles(Math.round(v))} min={0} max={120} step={1} />} markers={hamrMarkers} markerMin={0} markerMax={120}>
+          <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={hamrShuttles} onValueChange={(v) => setHamrShuttles(Math.round(v as number))} minimumValue={0} maximumValue={120} step={1} />
+        </LabeledSlider>
+      )}
+    </View>
+  );
+
   return (
     <View className="flex-1">
       <LinearGradient
@@ -630,7 +733,7 @@ export default function CalculatorScreen() {
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
-          stickyHeaderIndices={isWide ? [] : [1]}
+          stickyHeaderIndices={isWide ? undefined : [1]}
         >
           <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6 pt-4 pb-2">
             <Text className="text-2xl font-bold text-white">PFRA Calculator</Text>
@@ -642,7 +745,7 @@ export default function CalculatorScreen() {
             style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}
             className="px-6 pt-2 pb-2"
           >
-            <View className="rounded-2xl border border-white/10 bg-[#10233E]/95 px-4 py-4">
+            <View style={{ maxWidth: summaryMaxWidth }} className="rounded-2xl border border-white/10 bg-[#10233E]/95 px-4 py-4">
               <View className="flex-row items-center gap-4">
                 <View className="w-[126px] items-center justify-center">
                   <View style={{ width: circleSize, height: circleSize }} className="items-center justify-center">
@@ -686,209 +789,31 @@ export default function CalculatorScreen() {
             </View>
           </View>
 
-          {isWide ? (
-            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6 pt-2">
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
-                <View style={{ width: '32.2%' }}>
-                  <AudioPanel disableSwipe={disableSwipe} enableSwipe={enableSwipe} containerClassName="rounded-2xl border border-white/10 bg-white/5 p-4" />
+          <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
+            {isWide ? (
+              <>
+                <View className="mt-6 flex-row items-start" style={{ gap: 16 }}>
+                  <View style={{ flex: 1 }}>{renderAudioCard()}</View>
+                  <View style={{ flex: 1 }}>{metricsCard}</View>
+                  <View style={{ flex: 1 }}>{bodyCompCard}</View>
                 </View>
-
-                <View style={{ width: '32.2%' }} onLayout={setSectionY('metrics')}>
-                  <View className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.whtR.soft, borderColor: THEMES.whtR.border }}>
-                    <Text className="mb-4 text-lg font-semibold text-white">Metrics</Text>
-
-                    <LabeledSlider label="Age" valueLabel={`${ageYears} years`} theme={THEMES.whtR} input={<BoundNumberField value={ageYears} onChange={(v) => setAgeYears(Math.round(v))} min={17} max={65} step={1} />}>
-                      <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={ageYears} onValueChange={(v) => setAgeYears(Math.round(v as number))} minimumValue={17} maximumValue={65} step={1} />
-                    </LabeledSlider>
-
-                    <View className="rounded-lg bg-white/10 p-1 flex-row">
-                      <SegmentedOption selected={gender === 'male'} label="Male" onPress={() => setGender('male')} theme={THEMES.whtR} />
-                      <SegmentedOption selected={gender === 'female'} label="Female" onPress={() => setGender('female')} theme={THEMES.whtR} />
-                    </View>
-                  </View>
+                <View className="mt-6 flex-row items-start" style={{ gap: 16 }}>
+                  <View style={{ flex: 1 }}>{strengthCard}</View>
+                  <View style={{ flex: 1 }}>{coreCard}</View>
+                  <View style={{ flex: 1 }}>{cardioCard}</View>
                 </View>
-
-                <View style={{ width: '32.2%' }} onLayout={setSectionY('bodycomp')}>
-                  <View className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.whtR.soft, borderColor: THEMES.whtR.border }}>
-                    <View className="mb-4">
-                      <Text className="text-lg font-semibold text-white">Body Composition</Text>
-                    </View>
-
-                    <MetricRow label="WHtR" value={whtrValue.toFixed(2)} />
-
-                    <LabeledSlider label="Waist" valueLabel={`${waistIn.toFixed(1)} in • score ${scores.waist.toFixed(1)}/20`} theme={THEMES.whtR} input={<BoundNumberField value={waistIn} onChange={setWaistIn} min={20} max={60} step={0.5} decimals={1} className="min-w-[64px] px-2.5" />} markers={waistMarkers} markerMin={20} markerMax={60}>
-                      <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={waistIn} onValueChange={(v) => setWaistIn(Number(v))} minimumValue={20} maximumValue={60} step={0.5} />
-                    </LabeledSlider>
-
-                    <LabeledSlider label="Height" valueLabel={`${heightIn.toFixed(1)} in`} theme={THEMES.whtR} input={<BoundNumberField value={heightIn} onChange={setHeightIn} min={48} max={84} step={0.5} decimals={1} className="min-w-[68px] px-2.5" />}>
-                      <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={heightIn} onValueChange={(v) => setHeightIn(Number(v))} minimumValue={48} maximumValue={84} step={0.5} />
-                    </LabeledSlider>
-                  </View>
-                </View>
-
-                <View style={{ width: '32.2%' }} onLayout={setSectionY('strength')}>
-                  <View className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.strength.soft, borderColor: THEMES.strength.border }}>
-                    <Text className="mb-4 text-lg font-semibold text-white">Strength</Text>
-
-                    <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
-                      <SegmentedOption selected={strengthTest === 'pushups'} label="Push-ups" onPress={() => setStrengthTest('pushups')} theme={THEMES.strength} />
-                      <SegmentedOption selected={strengthTest === 'hand_release_pushups'} label="Hand-release" onPress={() => setStrengthTest('hand_release_pushups')} theme={THEMES.strength} />
-                    </View>
-
-                    <LabeledSlider label="Reps" valueLabel={`${pushupReps} reps`} theme={THEMES.strength} input={<BoundNumberField value={pushupReps} onChange={(v) => setPushupReps(Math.round(v))} min={0} max={100} step={1} />} markers={strengthMarkers} markerMin={0} markerMax={100}>
-                      <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={pushupReps} onValueChange={(v) => setPushupReps(Math.round(v as number))} minimumValue={0} maximumValue={100} step={1} />
-                    </LabeledSlider>
-                  </View>
-                </View>
-
-                <View style={{ width: '32.2%' }} onLayout={setSectionY('core')}>
-                  <View className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.core.soft, borderColor: THEMES.core.border }}>
-                    <Text className="mb-4 text-lg font-semibold text-white">Core</Text>
-
-                    <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
-                      <SegmentedOption selected={coreTest === 'situps'} label="Sit-ups" onPress={() => setCoreTest('situps')} theme={THEMES.core} />
-                      <SegmentedOption selected={coreTest === 'cross_leg_reverse_crunch'} label="Cross-leg" onPress={() => setCoreTest('cross_leg_reverse_crunch')} theme={THEMES.core} />
-                      <SegmentedOption selected={coreTest === 'plank'} label="Plank" onPress={() => setCoreTest('plank')} theme={THEMES.core} />
-                    </View>
-
-                    {coreTest === 'plank' ? (
-                      <LabeledSlider label="Time" valueLabel={formatMMSS(plankSec)} theme={THEMES.core} input={<BoundTimeField valueSec={plankSec} onChange={setPlankSec} minSec={0} maxSec={300} />} markers={coreMarkers} markerMin={0} markerMax={300}>
-                        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={plankSec} onValueChange={(v) => setPlankSec(Math.round(v as number))} minimumValue={0} maximumValue={300} step={1} />
-                      </LabeledSlider>
-                    ) : (
-                      <LabeledSlider label="Reps" valueLabel={`${coreReps} reps`} theme={THEMES.core} input={<BoundNumberField value={coreReps} onChange={(v) => setCoreReps(Math.round(v))} min={0} max={100} step={1} />} markers={coreMarkers} markerMin={0} markerMax={100}>
-                        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={coreReps} onValueChange={(v) => setCoreReps(Math.round(v as number))} minimumValue={0} maximumValue={100} step={1} />
-                      </LabeledSlider>
-                    )}
-                  </View>
-                </View>
-
-                <View style={{ width: '32.2%' }} onLayout={setSectionY('cardio')}>
-                  <View className="rounded-2xl border p-5" style={{ backgroundColor: THEMES.cardio.soft, borderColor: THEMES.cardio.border }}>
-                    <Text className="mb-4 text-lg font-semibold text-white">Cardio</Text>
-
-                    <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
-                      <SegmentedOption selected={cardioTest === 'run_2mile'} label="2-mile Run" onPress={() => setCardioTest('run_2mile')} theme={THEMES.cardio} />
-                      <SegmentedOption selected={cardioTest === 'hamr_20m'} label="HAMR" onPress={() => setCardioTest('hamr_20m')} theme={THEMES.cardio} />
-                      <SegmentedOption selected={cardioTest === 'walk_2k'} label="2km Walk" onPress={() => setCardioTest('walk_2k')} theme={THEMES.cardio} />
-                    </View>
-
-                    {cardioTest === 'run_2mile' && (
-                      <LabeledSlider label="2-mile time" valueLabel={formatMMSS(runSec)} theme={THEMES.cardio} input={<BoundTimeField valueSec={runSec} onChange={setRunSec} minSec={8 * 60} maxSec={30 * 60} />} markers={runMarkers} markerMin={8 * 60} markerMax={30 * 60}>
-                        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={runSec} onValueChange={(v) => setRunSec(Math.round(v as number))} minimumValue={8 * 60} maximumValue={30 * 60} step={1} />
-                      </LabeledSlider>
-                    )}
-
-                    {cardioTest === 'walk_2k' && (
-                      <LabeledSlider label="2K walk maximum time" valueLabel={`${formatMMSS(walkSec)} • pass/fail only`} theme={THEMES.cardio} input={<BoundTimeField valueSec={walkSec} onChange={setWalkSec} minSec={10 * 60} maxSec={30 * 60} />} markers={walkMarkers} markerMin={10 * 60} markerMax={30 * 60}>
-                        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={walkSec} onValueChange={(v) => setWalkSec(Math.round(v as number))} minimumValue={10 * 60} maximumValue={30 * 60} step={1} />
-                      </LabeledSlider>
-                    )}
-
-                    {cardioTest === 'hamr_20m' && (
-                      <LabeledSlider label="HAMR shuttles" valueLabel={`${hamrShuttles} shuttles`} theme={THEMES.cardio} input={<BoundNumberField value={hamrShuttles} onChange={(v) => setHamrShuttles(Math.round(v))} min={0} max={120} step={1} />} markers={hamrMarkers} markerMin={0} markerMax={120}>
-                        <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={hamrShuttles} onValueChange={(v) => setHamrShuttles(Math.round(v as number))} minimumValue={0} maximumValue={120} step={1} />
-                      </LabeledSlider>
-                    )}
-                  </View>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
-              <AudioPanel disableSwipe={disableSwipe} enableSwipe={enableSwipe} containerClassName="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4" />
-
-              <View onLayout={setSectionY('metrics')} className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: THEMES.whtR.soft, borderColor: THEMES.whtR.border }}>
-                <Text className="mb-4 text-lg font-semibold text-white">Metrics</Text>
-
-                <LabeledSlider label="Age" valueLabel={`${ageYears} years`} theme={THEMES.whtR} input={<BoundNumberField value={ageYears} onChange={(v) => setAgeYears(Math.round(v))} min={17} max={65} step={1} />}>
-                  <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={ageYears} onValueChange={(v) => setAgeYears(Math.round(v as number))} minimumValue={17} maximumValue={65} step={1} />
-                </LabeledSlider>
-
-                <View className="rounded-lg bg-white/10 p-1 flex-row">
-                  <SegmentedOption selected={gender === 'male'} label="Male" onPress={() => setGender('male')} theme={THEMES.whtR} />
-                  <SegmentedOption selected={gender === 'female'} label="Female" onPress={() => setGender('female')} theme={THEMES.whtR} />
-                </View>
-              </View>
-
-              <View onLayout={setSectionY('bodycomp')} className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: THEMES.whtR.soft, borderColor: THEMES.whtR.border }}>
-                <View className="mb-4">
-                  <Text className="text-lg font-semibold text-white">Body Composition</Text>
-                </View>
-
-                <MetricRow label="WHtR" value={whtrValue.toFixed(2)} />
-
-                <LabeledSlider label="Waist" valueLabel={`${waistIn.toFixed(1)} in • score ${scores.waist.toFixed(1)}/20`} theme={THEMES.whtR} input={<BoundNumberField value={waistIn} onChange={setWaistIn} min={20} max={60} step={0.5} decimals={1} className="min-w-[64px] px-2.5" />} markers={waistMarkers} markerMin={20} markerMax={60}>
-                  <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={waistIn} onValueChange={(v) => setWaistIn(Number(v))} minimumValue={20} maximumValue={60} step={0.5} />
-                </LabeledSlider>
-
-                <LabeledSlider label="Height" valueLabel={`${heightIn.toFixed(1)} in`} theme={THEMES.whtR} input={<BoundNumberField value={heightIn} onChange={setHeightIn} min={48} max={84} step={0.5} decimals={1} className="min-w-[68px] px-2.5" />}>
-                  <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={heightIn} onValueChange={(v) => setHeightIn(Number(v))} minimumValue={48} maximumValue={84} step={0.5} />
-                </LabeledSlider>
-              </View>
-
-              <View onLayout={setSectionY('strength')} className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: THEMES.strength.soft, borderColor: THEMES.strength.border }}>
-                <Text className="mb-4 text-lg font-semibold text-white">Strength</Text>
-
-                <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
-                  <SegmentedOption selected={strengthTest === 'pushups'} label="Push-ups" onPress={() => setStrengthTest('pushups')} theme={THEMES.strength} />
-                  <SegmentedOption selected={strengthTest === 'hand_release_pushups'} label="Hand-release" onPress={() => setStrengthTest('hand_release_pushups')} theme={THEMES.strength} />
-                </View>
-
-                <LabeledSlider label="Reps" valueLabel={`${pushupReps} reps`} theme={THEMES.strength} input={<BoundNumberField value={pushupReps} onChange={(v) => setPushupReps(Math.round(v))} min={0} max={100} step={1} />} markers={strengthMarkers} markerMin={0} markerMax={100}>
-                  <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={pushupReps} onValueChange={(v) => setPushupReps(Math.round(v as number))} minimumValue={0} maximumValue={100} step={1} />
-                </LabeledSlider>
-              </View>
-
-              <View onLayout={setSectionY('core')} className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: THEMES.core.soft, borderColor: THEMES.core.border }}>
-                <Text className="mb-4 text-lg font-semibold text-white">Core</Text>
-
-                <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
-                  <SegmentedOption selected={coreTest === 'situps'} label="Sit-ups" onPress={() => setCoreTest('situps')} theme={THEMES.core} />
-                  <SegmentedOption selected={coreTest === 'cross_leg_reverse_crunch'} label="Cross-leg" onPress={() => setCoreTest('cross_leg_reverse_crunch')} theme={THEMES.core} />
-                  <SegmentedOption selected={coreTest === 'plank'} label="Plank" onPress={() => setCoreTest('plank')} theme={THEMES.core} />
-                </View>
-
-                {coreTest === 'plank' ? (
-                  <LabeledSlider label="Time" valueLabel={formatMMSS(plankSec)} theme={THEMES.core} input={<BoundTimeField valueSec={plankSec} onChange={setPlankSec} minSec={0} maxSec={300} />} markers={coreMarkers} markerMin={0} markerMax={300}>
-                    <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={plankSec} onValueChange={(v) => setPlankSec(Math.round(v as number))} minimumValue={0} maximumValue={300} step={1} />
-                  </LabeledSlider>
-                ) : (
-                  <LabeledSlider label="Reps" valueLabel={`${coreReps} reps`} theme={THEMES.core} input={<BoundNumberField value={coreReps} onChange={(v) => setCoreReps(Math.round(v))} min={0} max={100} step={1} />} markers={coreMarkers} markerMin={0} markerMax={100}>
-                    <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={coreReps} onValueChange={(v) => setCoreReps(Math.round(v as number))} minimumValue={0} maximumValue={100} step={1} />
-                  </LabeledSlider>
-                )}
-              </View>
-
-              <View onLayout={setSectionY('cardio')} className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: THEMES.cardio.soft, borderColor: THEMES.cardio.border }}>
-                <Text className="mb-4 text-lg font-semibold text-white">Cardio</Text>
-
-                <View className="mb-5 rounded-lg bg-white/10 p-1 flex-row">
-                  <SegmentedOption selected={cardioTest === 'run_2mile'} label="2-mile Run" onPress={() => setCardioTest('run_2mile')} theme={THEMES.cardio} />
-                  <SegmentedOption selected={cardioTest === 'hamr_20m'} label="HAMR" onPress={() => setCardioTest('hamr_20m')} theme={THEMES.cardio} />
-                  <SegmentedOption selected={cardioTest === 'walk_2k'} label="2km Walk" onPress={() => setCardioTest('walk_2k')} theme={THEMES.cardio} />
-                </View>
-
-                {cardioTest === 'run_2mile' && (
-                  <LabeledSlider label="2-mile time" valueLabel={formatMMSS(runSec)} theme={THEMES.cardio} input={<BoundTimeField valueSec={runSec} onChange={setRunSec} minSec={8 * 60} maxSec={30 * 60} />} markers={runMarkers} markerMin={8 * 60} markerMax={30 * 60}>
-                    <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={runSec} onValueChange={(v) => setRunSec(Math.round(v as number))} minimumValue={8 * 60} maximumValue={30 * 60} step={1} />
-                  </LabeledSlider>
-                )}
-
-                {cardioTest === 'walk_2k' && (
-                  <LabeledSlider label="2K walk maximum time" valueLabel={`${formatMMSS(walkSec)} • pass/fail only`} theme={THEMES.cardio} input={<BoundTimeField valueSec={walkSec} onChange={setWalkSec} minSec={10 * 60} maxSec={30 * 60} />} markers={walkMarkers} markerMin={10 * 60} markerMax={30 * 60}>
-                    <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={walkSec} onValueChange={(v) => setWalkSec(Math.round(v as number))} minimumValue={10 * 60} maximumValue={30 * 60} step={1} />
-                  </LabeledSlider>
-                )}
-
-                {cardioTest === 'hamr_20m' && (
-                  <LabeledSlider label="HAMR shuttles" valueLabel={`${hamrShuttles} shuttles`} theme={THEMES.cardio} input={<BoundNumberField value={hamrShuttles} onChange={(v) => setHamrShuttles(Math.round(v))} min={0} max={120} step={1} />} markers={hamrMarkers} markerMin={0} markerMax={120}>
-                    <SmartSlider onSlidingStart={disableSwipe} onSlidingComplete={enableSwipe} value={hamrShuttles} onValueChange={(v) => setHamrShuttles(Math.round(v as number))} minimumValue={0} maximumValue={120} step={1} />
-                  </LabeledSlider>
-                )}
-              </View>
-            </View>
-          )}
+              </>
+            ) : (
+              <>
+                {renderAudioCard('mt-6')}
+                <View className="mt-6">{metricsCard}</View>
+                <View className="mt-6">{bodyCompCard}</View>
+                <View className="mt-6">{strengthCard}</View>
+                <View className="mt-6">{coreCard}</View>
+                <View className="mt-6">{cardioCard}</View>
+              </>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
