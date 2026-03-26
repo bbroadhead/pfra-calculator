@@ -1,0 +1,533 @@
+import React, { useState, useMemo } from 'react';
+import { View, Text, Pressable, ScrollView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Slider from '@react-native-community/slider';
+import { Activity, Timer, Dumbbell, Heart, Target, CheckCircle2, AlertCircle } from 'lucide-react-native';
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { cn } from '@/lib/cn';
+import { SwipeableTabView } from '@/components/SwipeableTabView';
+
+type Gender = 'male' | 'female';
+type AerobicTest = '1.5_mile' | 'hamr' | '20m_shuttle';
+type StrengthTest = 'pushups' | 'hand_release_pushups';
+type CoreTest = 'situps' | 'cross_leg_reverse_crunch' | 'plank';
+
+// Simplified AF Fitness Score Charts (2024 standards)
+// These are approximations based on official charts
+const calculateAerobicScore = (gender: Gender, test: AerobicTest, value: number): number => {
+  if (test === '1.5_mile') {
+    // Value is in minutes (e.g., 10.5 = 10:30)
+    const maxTimes = gender === 'male'
+      ? { max: 9.12, min: 16.22 }
+      : { max: 10.23, min: 18.56 };
+
+    if (value <= maxTimes.max) return 60;
+    if (value >= maxTimes.min) return 0;
+
+    const range = maxTimes.min - maxTimes.max;
+    const position = value - maxTimes.max;
+    return Math.round(60 - (position / range) * 60);
+  }
+
+  if (test === 'hamr') {
+    // Value is shuttles completed
+    const maxShuttles = gender === 'male' ? 75 : 63;
+    const minShuttles = gender === 'male' ? 20 : 15;
+
+    if (value >= maxShuttles) return 60;
+    if (value <= minShuttles) return 0;
+
+    return Math.round(((value - minShuttles) / (maxShuttles - minShuttles)) * 60);
+  }
+
+  // 20m shuttle
+  const maxShuttles = gender === 'male' ? 100 : 80;
+  const minShuttles = gender === 'male' ? 30 : 20;
+
+  if (value >= maxShuttles) return 60;
+  if (value <= minShuttles) return 0;
+
+  return Math.round(((value - minShuttles) / (maxShuttles - minShuttles)) * 60);
+};
+
+const calculateStrengthScore = (gender: Gender, test: StrengthTest, value: number): number => {
+  const maxReps = gender === 'male'
+    ? (test === 'pushups' ? 67 : 50)
+    : (test === 'pushups' ? 47 : 35);
+  const minReps = gender === 'male'
+    ? (test === 'pushups' ? 33 : 20)
+    : (test === 'pushups' ? 18 : 10);
+
+  if (value >= maxReps) return 20;
+  if (value <= minReps) return 0;
+
+  return Math.round(((value - minReps) / (maxReps - minReps)) * 20);
+};
+
+const calculateCoreScore = (gender: Gender, test: CoreTest, value: number): number => {
+  if (test === 'plank') {
+    // Value is in seconds
+    const maxTime = gender === 'male' ? 210 : 180; // 3:30 / 3:00
+    const minTime = 60; // 1:00
+
+    if (value >= maxTime) return 20;
+    if (value <= minTime) return 0;
+
+    return Math.round(((value - minTime) / (maxTime - minTime)) * 20);
+  }
+
+  // Situps or cross-leg reverse crunch (reps in 1 min)
+  const maxReps = gender === 'male'
+    ? (test === 'situps' ? 58 : 35)
+    : (test === 'situps' ? 47 : 30);
+  const minReps = gender === 'male'
+    ? (test === 'situps' ? 30 : 15)
+    : (test === 'situps' ? 25 : 12);
+
+  if (value >= maxReps) return 20;
+  if (value <= minReps) return 0;
+
+  return Math.round(((value - minReps) / (maxReps - minReps)) * 20);
+};
+
+interface ComponentCardProps {
+  title: string;
+  icon: React.ElementType;
+  score: number;
+  maxScore: number;
+  color: string;
+  children: React.ReactNode;
+  delay: number;
+}
+
+function ComponentCard({ title, icon: Icon, score, maxScore, color, children, delay }: ComponentCardProps) {
+  const progressWidth = useSharedValue(0);
+
+  React.useEffect(() => {
+    progressWidth.value = withSpring((score / maxScore) * 100, { damping: 15 });
+  }, [score, maxScore]);
+
+  const animatedProgressStyle = useAnimatedStyle(() => ({
+    width: `${progressWidth.value}%`,
+  }));
+
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(delay).springify()}
+      className="bg-white/5 rounded-2xl p-5 mb-4 border border-white/10"
+    >
+      <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center">
+          <View className="w-10 h-10 rounded-full items-center justify-center mr-3" style={{ backgroundColor: color + '20' }}>
+            <Icon size={20} color={color} />
+          </View>
+          <Text className="text-white font-semibold text-lg">{title}</Text>
+        </View>
+        <View className="bg-white/10 px-3 py-1 rounded-full">
+          <Text className="text-white font-bold">{score}/{maxScore}</Text>
+        </View>
+      </View>
+
+      {/* Progress Bar */}
+      <View className="h-2 bg-white/10 rounded-full overflow-hidden mb-4">
+        <Animated.View
+          style={[animatedProgressStyle, { backgroundColor: color }]}
+          className="h-full rounded-full"
+        />
+      </View>
+
+      {children}
+    </Animated.View>
+  );
+}
+
+export default function CalculatorScreen() {
+  const [gender, setGender] = useState<Gender>('male');
+  const [aerobicTest, setAerobicTest] = useState<AerobicTest>('1.5_mile');
+  const [strengthTest, setStrengthTest] = useState<StrengthTest>('pushups');
+  const [coreTest, setCoreTest] = useState<CoreTest>('situps');
+
+  // Values
+  const [runTime, setRunTime] = useState(12.0); // minutes
+  const [hamrShuttles, setHamrShuttles] = useState(45);
+  const [shuttleRun, setShuttleRun] = useState(60);
+  const [pushups, setPushups] = useState(40);
+  const [situps, setSitups] = useState(40);
+  const [plankTime, setPlankTime] = useState(120); // seconds
+
+  const aerobicValue = aerobicTest === '1.5_mile' ? runTime : aerobicTest === 'hamr' ? hamrShuttles : shuttleRun;
+  const strengthValue = pushups;
+  const coreValue = coreTest === 'plank' ? plankTime : situps;
+
+  const scores = useMemo(() => {
+    const aerobic = calculateAerobicScore(gender, aerobicTest, aerobicValue);
+    const strength = calculateStrengthScore(gender, strengthTest, strengthValue);
+    const core = calculateCoreScore(gender, coreTest, coreValue);
+    const total = aerobic + strength + core;
+
+    return { aerobic, strength, core, total };
+  }, [gender, aerobicTest, aerobicValue, strengthTest, strengthValue, coreTest, coreValue]);
+
+  const getScoreStatus = (total: number) => {
+    if (total >= 90) return { label: 'Excellent', color: '#22C55E' };
+    if (total >= 75) return { label: 'Satisfactory', color: '#4A90D9' };
+    if (total >= 60) return { label: 'Pass', color: '#F59E0B' };
+    return { label: 'Fail', color: '#EF4444' };
+  };
+
+  const status = getScoreStatus(scores.total);
+
+  const formatTime = (minutes: number) => {
+    const mins = Math.floor(minutes);
+    const secs = Math.round((minutes - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatPlankTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <SwipeableTabView>
+    <View className="flex-1">
+      <LinearGradient
+        colors={['#0A1628', '#001F5C', '#0A1628']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+      />
+
+      <SafeAreaView edges={['top']} className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <Animated.View
+            entering={FadeInDown.delay(100).springify()}
+            className="px-6 pt-4 pb-2"
+          >
+            <Text className="text-white text-2xl font-bold">FA Calculator</Text>
+            <Text className="text-af-silver text-sm mt-1">Air Force Fitness Assessment Score</Text>
+          </Animated.View>
+
+          {/* Total Score Card */}
+          <Animated.View
+            entering={FadeInDown.delay(150).springify()}
+            className="mx-6 mt-4 p-6 bg-white/10 rounded-3xl border border-white/20"
+          >
+            <View className="items-center">
+              <View className="w-32 h-32 rounded-full items-center justify-center border-4" style={{ borderColor: status.color }}>
+                <Text className="text-white text-4xl font-bold">{scores.total}</Text>
+                <Text className="text-af-silver text-sm">/ 100</Text>
+              </View>
+              <View className="flex-row items-center mt-4 px-4 py-2 rounded-full" style={{ backgroundColor: status.color + '20' }}>
+                {scores.total >= 60 ? (
+                  <CheckCircle2 size={18} color={status.color} />
+                ) : (
+                  <AlertCircle size={18} color={status.color} />
+                )}
+                <Text style={{ color: status.color }} className="font-bold ml-2">{status.label}</Text>
+              </View>
+            </View>
+
+            {/* Quick Stats */}
+            <View className="flex-row justify-around mt-6 pt-4 border-t border-white/10">
+              <View className="items-center">
+                <Text className="text-af-accent font-bold text-xl">{scores.aerobic}</Text>
+                <Text className="text-af-silver text-xs">Aerobic</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-af-success font-bold text-xl">{scores.strength}</Text>
+                <Text className="text-af-silver text-xs">Strength</Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-af-warning font-bold text-xl">{scores.core}</Text>
+                <Text className="text-af-silver text-xs">Core</Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Gender Selection */}
+          <Animated.View
+            entering={FadeInDown.delay(200).springify()}
+            className="mx-6 mt-6"
+          >
+            <Text className="text-white/60 text-sm mb-2 ml-1">Gender</Text>
+            <View className="flex-row bg-white/10 rounded-xl p-1">
+              <Pressable
+                onPress={() => { setGender('male'); Haptics.selectionAsync(); }}
+                className={cn(
+                  "flex-1 py-3 rounded-lg",
+                  gender === 'male' && "bg-af-blue"
+                )}
+              >
+                <Text className={cn(
+                  "text-center font-semibold",
+                  gender === 'male' ? "text-white" : "text-white/60"
+                )}>Male</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { setGender('female'); Haptics.selectionAsync(); }}
+                className={cn(
+                  "flex-1 py-3 rounded-lg",
+                  gender === 'female' && "bg-af-blue"
+                )}
+              >
+                <Text className={cn(
+                  "text-center font-semibold",
+                  gender === 'female' ? "text-white" : "text-white/60"
+                )}>Female</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+
+          {/* Aerobic Component */}
+          <View className="px-6 mt-6">
+            <ComponentCard
+              title="Aerobic"
+              icon={Heart}
+              score={scores.aerobic}
+              maxScore={60}
+              color="#4A90D9"
+              delay={300}
+            >
+              {/* Test Type Selection */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+                <View className="flex-row mb-4">
+                  {([
+                    { key: '1.5_mile', label: '1.5 Mile Run' },
+                    { key: 'hamr', label: 'HAMR' },
+                    { key: '20m_shuttle', label: '20m Shuttle' },
+                  ] as const).map((test) => (
+                    <Pressable
+                      key={test.key}
+                      onPress={() => { setAerobicTest(test.key); Haptics.selectionAsync(); }}
+                      className={cn(
+                        "px-4 py-2 rounded-lg mr-2 border",
+                        aerobicTest === test.key
+                          ? "bg-af-accent/20 border-af-accent"
+                          : "bg-white/5 border-white/10"
+                      )}
+                    >
+                      <Text className={cn(
+                        "text-sm",
+                        aerobicTest === test.key ? "text-af-accent" : "text-white/60"
+                      )}>{test.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* Value Input */}
+              {aerobicTest === '1.5_mile' && (
+                <View>
+                  <Text className="text-white font-medium text-center mb-2">
+                    Time: {formatTime(runTime)}
+                  </Text>
+                  <Slider
+                    value={runTime}
+                    onValueChange={(v) => setRunTime(Math.round(v * 100) / 100)}
+                    minimumValue={8}
+                    maximumValue={20}
+                    step={0.05}
+                    minimumTrackTintColor="#4A90D9"
+                    maximumTrackTintColor="#ffffff20"
+                    thumbTintColor="#4A90D9"
+                  />
+                  <View className="flex-row justify-between mt-1">
+                    <Text className="text-white/40 text-xs">8:00</Text>
+                    <Text className="text-white/40 text-xs">20:00</Text>
+                  </View>
+                </View>
+              )}
+
+              {aerobicTest === 'hamr' && (
+                <View>
+                  <Text className="text-white font-medium text-center mb-2">
+                    Shuttles: {hamrShuttles}
+                  </Text>
+                  <Slider
+                    value={hamrShuttles}
+                    onValueChange={(v) => setHamrShuttles(Math.round(v))}
+                    minimumValue={10}
+                    maximumValue={100}
+                    step={1}
+                    minimumTrackTintColor="#4A90D9"
+                    maximumTrackTintColor="#ffffff20"
+                    thumbTintColor="#4A90D9"
+                  />
+                  <View className="flex-row justify-between mt-1">
+                    <Text className="text-white/40 text-xs">10</Text>
+                    <Text className="text-white/40 text-xs">100</Text>
+                  </View>
+                </View>
+              )}
+
+              {aerobicTest === '20m_shuttle' && (
+                <View>
+                  <Text className="text-white font-medium text-center mb-2">
+                    Shuttles: {shuttleRun}
+                  </Text>
+                  <Slider
+                    value={shuttleRun}
+                    onValueChange={(v) => setShuttleRun(Math.round(v))}
+                    minimumValue={15}
+                    maximumValue={120}
+                    step={1}
+                    minimumTrackTintColor="#4A90D9"
+                    maximumTrackTintColor="#ffffff20"
+                    thumbTintColor="#4A90D9"
+                  />
+                  <View className="flex-row justify-between mt-1">
+                    <Text className="text-white/40 text-xs">15</Text>
+                    <Text className="text-white/40 text-xs">120</Text>
+                  </View>
+                </View>
+              )}
+            </ComponentCard>
+
+            {/* Strength Component */}
+            <ComponentCard
+              title="Strength"
+              icon={Dumbbell}
+              score={scores.strength}
+              maxScore={20}
+              color="#22C55E"
+              delay={400}
+            >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+                <View className="flex-row mb-4">
+                  {([
+                    { key: 'pushups', label: 'Push-ups' },
+                    { key: 'hand_release_pushups', label: 'Hand Release Push-ups' },
+                  ] as const).map((test) => (
+                    <Pressable
+                      key={test.key}
+                      onPress={() => { setStrengthTest(test.key); Haptics.selectionAsync(); }}
+                      className={cn(
+                        "px-4 py-2 rounded-lg mr-2 border",
+                        strengthTest === test.key
+                          ? "bg-af-success/20 border-af-success"
+                          : "bg-white/5 border-white/10"
+                      )}
+                    >
+                      <Text className={cn(
+                        "text-sm",
+                        strengthTest === test.key ? "text-af-success" : "text-white/60"
+                      )}>{test.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+
+              <View>
+                <Text className="text-white font-medium text-center mb-2">
+                  Reps: {pushups}
+                </Text>
+                <Slider
+                  value={pushups}
+                  onValueChange={(v) => setPushups(Math.round(v))}
+                  minimumValue={0}
+                  maximumValue={80}
+                  step={1}
+                  minimumTrackTintColor="#22C55E"
+                  maximumTrackTintColor="#ffffff20"
+                  thumbTintColor="#22C55E"
+                />
+                <View className="flex-row justify-between mt-1">
+                  <Text className="text-white/40 text-xs">0</Text>
+                  <Text className="text-white/40 text-xs">80</Text>
+                </View>
+              </View>
+            </ComponentCard>
+
+            {/* Core Component */}
+            <ComponentCard
+              title="Core"
+              icon={Activity}
+              score={scores.core}
+              maxScore={20}
+              color="#F59E0B"
+              delay={500}
+            >
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+                <View className="flex-row mb-4">
+                  {([
+                    { key: 'situps', label: 'Sit-ups' },
+                    { key: 'cross_leg_reverse_crunch', label: 'Cross-Leg Rev. Crunch' },
+                    { key: 'plank', label: 'Plank' },
+                  ] as const).map((test) => (
+                    <Pressable
+                      key={test.key}
+                      onPress={() => { setCoreTest(test.key); Haptics.selectionAsync(); }}
+                      className={cn(
+                        "px-4 py-2 rounded-lg mr-2 border",
+                        coreTest === test.key
+                          ? "bg-af-warning/20 border-af-warning"
+                          : "bg-white/5 border-white/10"
+                      )}
+                    >
+                      <Text className={cn(
+                        "text-sm",
+                        coreTest === test.key ? "text-af-warning" : "text-white/60"
+                      )}>{test.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {coreTest === 'plank' ? (
+                <View>
+                  <Text className="text-white font-medium text-center mb-2">
+                    Hold Time: {formatPlankTime(plankTime)}
+                  </Text>
+                  <Slider
+                    value={plankTime}
+                    onValueChange={(v) => setPlankTime(Math.round(v))}
+                    minimumValue={30}
+                    maximumValue={240}
+                    step={5}
+                    minimumTrackTintColor="#F59E0B"
+                    maximumTrackTintColor="#ffffff20"
+                    thumbTintColor="#F59E0B"
+                  />
+                  <View className="flex-row justify-between mt-1">
+                    <Text className="text-white/40 text-xs">0:30</Text>
+                    <Text className="text-white/40 text-xs">4:00</Text>
+                  </View>
+                </View>
+              ) : (
+                <View>
+                  <Text className="text-white font-medium text-center mb-2">
+                    Reps (1 min): {situps}
+                  </Text>
+                  <Slider
+                    value={situps}
+                    onValueChange={(v) => setSitups(Math.round(v))}
+                    minimumValue={0}
+                    maximumValue={70}
+                    step={1}
+                    minimumTrackTintColor="#F59E0B"
+                    maximumTrackTintColor="#ffffff20"
+                    thumbTintColor="#F59E0B"
+                  />
+                  <View className="flex-row justify-between mt-1">
+                    <Text className="text-white/40 text-xs">0</Text>
+                    <Text className="text-white/40 text-xs">70</Text>
+                  </View>
+                </View>
+              )}
+            </ComponentCard>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+    </SwipeableTabView>
+  );
+}
