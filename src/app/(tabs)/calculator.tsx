@@ -908,7 +908,6 @@ export default function CalculatorScreen() {
               </>
             )}
           </View>
-          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
