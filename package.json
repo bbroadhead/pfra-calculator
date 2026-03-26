@@ -30,6 +30,7 @@
     "@babel/core": "^7.25.2",
     "typescript": "~5.8.3",
     "@babel/core": "^7.25.2",
+    "@babel/plugin-transform-export-namespace-from": "^7.27.1",
     "typescript": "~5.8.3",
     "babel-plugin-module-resolver": "^5.0.2"
   }
