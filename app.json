@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "FitFlight",
-    "slug": "fitflight",
-    "scheme": "fitflight",
+    "name": "PFRA Calculator",
+    "slug": "pfra-calculator",
+    "scheme": "pfra-calculator",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "output": "static"
     },
     "ios": {
       "supportsTablet": true
@@ -18,7 +19,7 @@
     },
     "plugins": ["expo-router"],
     "experiments": {
-      "baseUrl": "/FitFlight",
+      "baseUrl": "/pfra-calculator",
       "typedRoutes": true
     }
   }
