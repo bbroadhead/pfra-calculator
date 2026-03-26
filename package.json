@@ -28,6 +28,9 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "@babel/core": "^7.25.2",
+    "typescript": "~5.8.3",
+    "babel-plugin-module-resolver": "^5.0.2"
   }
 }
