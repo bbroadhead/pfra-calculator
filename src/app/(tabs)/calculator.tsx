@@ -274,15 +274,32 @@ function SegmentedOption({ selected, label, onPress, theme }: { selected: boolea
   );
 }
 
-function AudioPanel({ disableSwipe, enableSwipe, containerClassName = 'mx-6 mt-6 rounded-2xl border border-white/10 bg-white/5 p-4', containerStyle }: { disableSwipe: () => void; enableSwipe: () => void; containerClassName?: string; containerStyle?: any; }) {
+function AudioPanel({
+  disableSwipe,
+  enableSwipe,
+  containerClassName = 'mx-6 mt-6 rounded-2xl border border-white/10 bg-white/5 p-4',
+  containerStyle,
+  defaultCollapsed = false,
+}: {
+  disableSwipe: () => void;
+  enableSwipe: () => void;
+  containerClassName?: string;
+  containerStyle?: any;
+  defaultCollapsed?: boolean;
+}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [positionSec, setPositionSec] = useState(0);
   const [durationSec, setDurationSec] = useState(0);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const soundRef = useRef<Audio.Sound | null>(null);
   const webAudioRef = useRef<any>(null);
   const audioModule = useMemo(() => require('../../../assets/audio/20m HAMR Audio File.m4a'), []);
+
+  useEffect(() => {
+    setIsCollapsed(defaultCollapsed);
+  }, [defaultCollapsed]);
 
   useEffect(() => {
     let isMounted = true;
@@ -423,7 +440,15 @@ function AudioPanel({ disableSwipe, enableSwipe, containerClassName = 'mx-6 mt-6
 
   return (
     <View className={containerClassName} style={containerStyle}>
-      <Text className="mb-3 text-lg font-semibold text-white">20m HAMR Audio</Text>
+      <Pressable onPress={() => setIsCollapsed((prev) => !prev)} className="mb-1 flex-row items-center justify-between">
+        <Text className="text-lg font-semibold text-white">20m HAMR Audio</Text>
+        <View className="flex-row items-center gap-2">
+          {!isCollapsed ? (
+            <Text className="text-xs font-semibold text-white/60">{formatMMSS(positionSec)}/{formatMMSS(durationSec)}</Text>
+          ) : null}
+          <Ionicons name={isCollapsed ? 'chevron-down' : 'chevron-up'} size={18} color="rgba(255,255,255,0.9)" />
+        </View>
+      </Pressable>
 
       {Platform.OS === 'web' ? (
         // eslint-disable-next-line jsx-a11y/media-has-caption
@@ -450,41 +475,45 @@ function AudioPanel({ disableSwipe, enableSwipe, containerClassName = 'mx-6 mt-6
         />
       ) : null}
 
-      <View className="flex-row items-center gap-3">
-        <Pressable onPress={togglePlayback} className="h-9 w-9 items-center justify-center rounded-full bg-white/10">
-          <Ionicons name={isPlaying ? 'pause' : 'play'} size={16} color="#FFFFFF" />
-        </Pressable>
+      {!isCollapsed ? (
+        <View className="pt-3">
+          <View className="flex-row items-center gap-3">
+            <Pressable onPress={togglePlayback} className="h-9 w-9 items-center justify-center rounded-full bg-white/10">
+              <Ionicons name={isPlaying ? 'pause' : 'play'} size={16} color="#FFFFFF" />
+            </Pressable>
 
-        <View className="flex-1">
-          <SmartSlider
-            onSlidingStart={() => {
-              disableSwipe();
-              setIsSeeking(true);
-            }}
-            onSlidingComplete={(value) => {
-              const nextSec = Number(value) || 0;
-              setIsSeeking(false);
-              enableSwipe();
-              void seekTo(nextSec);
-            }}
-            onValueChange={(value) => setPositionSec(Number(value) || 0)}
-            value={progressValue}
-            minimumValue={0}
-            maximumValue={Math.max(durationSec, 1)}
-            step={0.1}
-            minimumTrackTintColor="#4A90D9"
-            maximumTrackTintColor="rgba(255,255,255,0.16)"
-            webStyle={{ accentColor: '#4A90D9' }}
-          />
-          <View className="-mt-1 flex-row items-center justify-end">
-            <Text className="text-sm font-semibold text-white/90">{formatMMSS(positionSec)}/{formatMMSS(durationSec)}</Text>
+            <View className="flex-1">
+              <SmartSlider
+                onSlidingStart={() => {
+                  disableSwipe();
+                  setIsSeeking(true);
+                }}
+                onSlidingComplete={(value) => {
+                  const nextSec = Number(value) || 0;
+                  setIsSeeking(false);
+                  enableSwipe();
+                  void seekTo(nextSec);
+                }}
+                onValueChange={(value) => setPositionSec(Number(value) || 0)}
+                value={progressValue}
+                minimumValue={0}
+                maximumValue={Math.max(durationSec, 1)}
+                step={0.1}
+                minimumTrackTintColor="#4A90D9"
+                maximumTrackTintColor="rgba(255,255,255,0.16)"
+                webStyle={{ accentColor: '#4A90D9' }}
+              />
+              <View className="-mt-1 flex-row items-center justify-end">
+                <Text className="text-sm font-semibold text-white/90">{formatMMSS(positionSec)}/{formatMMSS(durationSec)}</Text>
+              </View>
+            </View>
+
+            <Pressable onPress={handleDownload} className="h-9 w-9 items-center justify-center rounded-full bg-white/10">
+              <Ionicons name="download-outline" size={16} color="#FFFFFF" />
+            </Pressable>
           </View>
         </View>
-
-        <Pressable onPress={handleDownload} className="h-9 w-9 items-center justify-center rounded-full bg-white/10">
-          <Ionicons name="download-outline" size={16} color="#FFFFFF" />
-        </Pressable>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -495,14 +524,10 @@ export default function CalculatorScreen() {
   const sectionYRef = useRef<Record<'metrics' | 'bodycomp' | 'strength' | 'core' | 'cardio', number>>({ metrics: 0, bodycomp: 0, strength: 0, core: 0, cardio: 0 });
   const [summaryHeight, setSummaryHeight] = useState(0);
   const { width } = useWindowDimensions();
-  const isWide = width >= 1100;
-  /*
-  const contentMaxWidth = Math.min(Math.max(width - 24, 320), 1180);
-  const jumpOffset = isWide ? 16 : summaryHeight + 16;
-  */
-  const contentMaxWidth = isWide ? 1180 : width;
-  const horizontalPadding = isWide ? 12 : 0;
-  const jumpOffset = isWide ? 16 : summaryHeight + 16;
+  const isDesktop = width >= 1380;
+  const contentMaxWidth = isDesktop ? 1480 : undefined;
+  const jumpOffset = isDesktop ? 16 : summaryHeight + 16;
+  const desktopColumnStyle = { flex: 1, minWidth: 0 } as const;
 
   const setSectionY = (key: 'metrics' | 'bodycomp' | 'strength' | 'core' | 'cardio') => (event: LayoutChangeEvent) => {
     sectionYRef.current[key] = event.nativeEvent.layout.y;
@@ -608,7 +633,7 @@ export default function CalculatorScreen() {
     { value: clamp(walkPassThreshold, 10 * 60, 30 * 60), label: `PASS ${formatMMSS(clamp(walkPassThreshold, 10 * 60, 30 * 60))}` },
   ]), [walkPassThreshold]);
 
-  const circleSize = isWide ? 118 : 110;
+  const circleSize = isDesktop ? 108 : 110;
   const strokeWidth = 9;
   const radius = (circleSize - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -630,20 +655,21 @@ export default function CalculatorScreen() {
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
-          stickyHeaderIndices={isWide ? undefined : [1]}
+          stickyHeaderIndices={isDesktop ? undefined : [1]}
         >
-            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: horizontalPadding }} className="px-6 pt-4 pb-2">
+          <View style={{ width: '100%', alignItems: 'center' }}>
+            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6 pt-4 pb-2">
               <Text className="text-2xl font-bold text-white">PFRA Calculator</Text>
               <Text className="mt-1 text-sm text-af-silver">Based on PFRA Scoring Charts released on 1 MAR 2026</Text>
             </View>
 
             <View
               onLayout={(event) => setSummaryHeight(event.nativeEvent.layout.height)}
-              style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: horizontalPadding }}
+              style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}
               className="px-6 pt-2 pb-2"
             >
-              <View style={{ flexDirection: isWide ? 'row' : 'column', gap: 16, alignItems: 'stretch' }}>
-                <View style={{ flex: isWide ? 1.5 : undefined }} className="rounded-2xl border border-white/10 bg-[#10233E]/95 px-4 py-4">
+              <View style={{ flexDirection: 'column', gap: 16, alignItems: 'stretch' }}>
+                <View  className="rounded-2xl border border-white/10 bg-[#10233E]/95 px-4 py-4">
                   <View className="flex-row items-center gap-4">
                     <View className="w-[126px] items-center justify-center">
                       <View style={{ width: circleSize, height: circleSize }} className="items-center justify-center">
@@ -685,24 +711,15 @@ export default function CalculatorScreen() {
                     </View>
                   </View>
                 </View>
-
-                {isWide ? (
-                  <AudioPanel
-                    disableSwipe={disableSwipe}
-                    enableSwipe={enableSwipe}
-                    containerClassName="rounded-2xl border border-white/10 bg-white/5 p-4"
-                    containerStyle={{ flex: 1, minWidth: 320 }}
-                  />
-                ) : null}
               </View>
             </View>
 
-            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: horizontalPadding }} className="px-6">
-              {!isWide ? <AudioPanel disableSwipe={disableSwipe} enableSwipe={enableSwipe} containerClassName="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4" /> : null}
+            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
+              {!isDesktop ? <AudioPanel disableSwipe={disableSwipe} enableSwipe={enableSwipe} defaultCollapsed={false} containerClassName="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4" /> : null}
 
-              {isWide ? (
+              {isDesktop ? (
                 <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
+                  <View style={desktopColumnStyle}>
                     <View onLayout={setSectionY('metrics')} className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: THEMES.whtR.soft, borderColor: THEMES.whtR.border }}>
                       <Text className="mb-4 text-lg font-semibold text-white">Metrics</Text>
 
@@ -733,7 +750,7 @@ export default function CalculatorScreen() {
                     </View>
                   </View>
 
-                  <View style={{ flex: 1 }}>
+                  <View style={desktopColumnStyle}>
                     <View onLayout={setSectionY('strength')} className="mt-6 rounded-2xl border p-5" style={{ backgroundColor: THEMES.strength.soft, borderColor: THEMES.strength.border }}>
                       <Text className="mb-4 text-lg font-semibold text-white">Strength</Text>
 
@@ -794,6 +811,15 @@ export default function CalculatorScreen() {
                         </LabeledSlider>
                       )}
                     </View>
+                  </View>
+
+                  <View style={desktopColumnStyle}>
+                    <AudioPanel
+                      disableSwipe={disableSwipe}
+                      enableSwipe={enableSwipe}
+                      defaultCollapsed={true}
+                      containerClassName="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4"
+                    />
                   </View>
                 </View>
               ) : (
@@ -890,6 +916,7 @@ export default function CalculatorScreen() {
                 </>
               )}
             </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
