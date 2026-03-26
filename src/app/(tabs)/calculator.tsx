@@ -800,8 +800,9 @@ export default function CalculatorScreen() {
               </View>
             </View>
           ) : (
-            <>
+            [
               <View
+                key="mobile-summary"
                 onLayout={(event) => setSummaryHeight(event.nativeEvent.layout.height)}
                 style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}
                 className="px-6 pt-2 pb-2"
@@ -848,9 +849,9 @@ export default function CalculatorScreen() {
                     </View>
                   </View>
                 </View>
-              </View>
+              </View>,
 
-              <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
+              <View key="mobile-content" style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
                 {renderAudioCard('mt-6')}
                 <View className="mt-6">{metricsCard}</View>
                 <View className="mt-6">{bodyCompCard}</View>
@@ -858,7 +859,7 @@ export default function CalculatorScreen() {
                 <View className="mt-6">{coreCard}</View>
                 <View className="mt-6">{cardioCard}</View>
               </View>
-            </>
+            ]
           )}
         </ScrollView>
       </SafeAreaView>
