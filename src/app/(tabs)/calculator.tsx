@@ -740,80 +740,126 @@ export default function CalculatorScreen() {
             <Text className="mt-1 text-sm text-af-silver">Based on PFRA Scoring Charts released on 1 MAR 2026</Text>
           </View>
 
-          <View
-            onLayout={(event) => setSummaryHeight(event.nativeEvent.layout.height)}
-            style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}
-            className="px-6 pt-2 pb-2"
-          >
-            <View style={{ maxWidth: summaryMaxWidth }} className="rounded-2xl border border-white/10 bg-[#10233E]/95 px-4 py-4">
-              <View className="flex-row items-center gap-4">
-                <View className="w-[126px] items-center justify-center">
-                  <View style={{ width: circleSize, height: circleSize }} className="items-center justify-center">
-                    <Svg width={circleSize} height={circleSize} style={{ position: 'absolute' }}>
-                      <Circle cx={circleSize / 2} cy={circleSize / 2} r={radius} stroke="rgba(255,255,255,0.12)" strokeWidth={strokeWidth} fill="none" />
-                      <Circle
-                        cx={circleSize / 2}
-                        cy={circleSize / 2}
-                        r={radius}
-                        stroke={status.color}
-                        strokeWidth={strokeWidth}
-                        fill="none"
-                        strokeDasharray={`${circumference} ${circumference}`}
-                        strokeDashoffset={dashOffset}
-                        strokeLinecap="round"
-                        originX={circleSize / 2}
-                        originY={circleSize / 2}
-                        rotation={-90}
-                      />
-                    </Svg>
-                    <View className="items-center justify-center rounded-full px-3 py-2" style={{ minWidth: 74, backgroundColor: 'rgba(10,22,40,0.72)' }}>
-                      <Text className="text-3xl font-bold" style={{ color: officialTotal === null ? '#FFFFFF' : status.color }}>
-                        {officialTotal === null ? '--' : officialTotal.toFixed(1)}
-                      </Text>
-                      <Text className="text-xs text-af-silver">{officialTotal === null ? (walkPass ? 'Walk pass' : 'Walk fail') : '/ 100'}</Text>
+          {isWide ? (
+            <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
+              <View className="mt-2 flex-row items-start" style={{ gap: 16 }}>
+                <View style={{ flex: 1, maxWidth: summaryMaxWidth }}>
+                  <View className="rounded-2xl border border-white/10 bg-[#10233E]/95 px-4 py-4">
+                    <View className="flex-row items-center gap-4">
+                      <View className="w-[126px] items-center justify-center">
+                        <View style={{ width: circleSize, height: circleSize }} className="items-center justify-center">
+                          <Svg width={circleSize} height={circleSize} style={{ position: 'absolute' }}>
+                            <Circle cx={circleSize / 2} cy={circleSize / 2} r={radius} stroke="rgba(255,255,255,0.12)" strokeWidth={strokeWidth} fill="none" />
+                            <Circle
+                              cx={circleSize / 2}
+                              cy={circleSize / 2}
+                              r={radius}
+                              stroke={status.color}
+                              strokeWidth={strokeWidth}
+                              fill="none"
+                              strokeDasharray={`${circumference} ${circumference}`}
+                              strokeDashoffset={dashOffset}
+                              strokeLinecap="round"
+                              originX={circleSize / 2}
+                              originY={circleSize / 2}
+                              rotation={-90}
+                            />
+                          </Svg>
+                          <View className="items-center justify-center rounded-full px-3 py-2" style={{ minWidth: 74, backgroundColor: 'rgba(10,22,40,0.72)' }}>
+                            <Text className="text-3xl font-bold" style={{ color: officialTotal === null ? '#FFFFFF' : status.color }}>
+                              {officialTotal === null ? '--' : officialTotal.toFixed(1)}
+                            </Text>
+                            <Text className="text-xs text-af-silver">{officialTotal === null ? (walkPass ? 'Walk pass' : 'Walk fail') : '/ 100'}</Text>
+                          </View>
+                        </View>
+                        <View className="mt-2 flex-row items-center rounded-full px-3 py-1.5" style={{ backgroundColor: `${status.color}20` }}>
+                          <Ionicons name={status.icon} size={15} color={status.color} />
+                          <Text style={{ color: status.color }} className="ml-2 text-xs font-bold">{status.label}</Text>
+                        </View>
+                      </View>
+
+                      <View className="flex-1">
+                        <ComponentScoreBar label="WHtR" value={scores.waist} max={20} theme={THEMES.whtR} onPress={() => scrollToSection('bodycomp')} />
+                        <ComponentScoreBar label="Strength" value={scores.strength} max={15} theme={THEMES.strength} onPress={() => scrollToSection('strength')} />
+                        <ComponentScoreBar label="Core" value={scores.core} max={15} theme={THEMES.core} onPress={() => scrollToSection('core')} />
+                        <ComponentScoreBar label="Cardio" value={cardioTest === 'walk_2k' ? (walkPass ? 50 : 0) : scores.cardio} max={50} theme={THEMES.cardio} isPassFail={cardioTest === 'walk_2k'} onPress={() => scrollToSection('cardio')} />
+                      </View>
                     </View>
                   </View>
-                  <View className="mt-2 flex-row items-center rounded-full px-3 py-1.5" style={{ backgroundColor: `${status.color}20` }}>
-                    <Ionicons name={status.icon} size={15} color={status.color} />
-                    <Text style={{ color: status.color }} className="ml-2 text-xs font-bold">{status.label}</Text>
-                  </View>
+                  {renderAudioCard('mt-6')}
                 </View>
 
-                <View className="flex-1">
-                  <ComponentScoreBar label="WHtR" value={scores.waist} max={20} theme={THEMES.whtR} onPress={() => scrollToSection('bodycomp')} />
-                  <ComponentScoreBar label="Strength" value={scores.strength} max={15} theme={THEMES.strength} onPress={() => scrollToSection('strength')} />
-                  <ComponentScoreBar label="Core" value={scores.core} max={15} theme={THEMES.core} onPress={() => scrollToSection('core')} />
-                  <ComponentScoreBar label="Cardio" value={cardioTest === 'walk_2k' ? (walkPass ? 50 : 0) : scores.cardio} max={50} theme={THEMES.cardio} isPassFail={cardioTest === 'walk_2k'} onPress={() => scrollToSection('cardio')} />
-                </View>
+                <View style={{ flex: 1 }}>{metricsCard}</View>
+                <View style={{ flex: 1 }}>{bodyCompCard}</View>
+              </View>
+
+              <View className="mt-6 flex-row items-start" style={{ gap: 16 }}>
+                <View style={{ flex: 1 }}>{strengthCard}</View>
+                <View style={{ flex: 1 }}>{coreCard}</View>
+                <View style={{ flex: 1 }}>{cardioCard}</View>
               </View>
             </View>
-          </View>
+          ) : (
+            <>
+              <View
+                onLayout={(event) => setSummaryHeight(event.nativeEvent.layout.height)}
+                style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}
+                className="px-6 pt-2 pb-2"
+              >
+                <View style={{ maxWidth: summaryMaxWidth }} className="rounded-2xl border border-white/10 bg-[#10233E]/95 px-4 py-4">
+                  <View className="flex-row items-center gap-4">
+                    <View className="w-[126px] items-center justify-center">
+                      <View style={{ width: circleSize, height: circleSize }} className="items-center justify-center">
+                        <Svg width={circleSize} height={circleSize} style={{ position: 'absolute' }}>
+                          <Circle cx={circleSize / 2} cy={circleSize / 2} r={radius} stroke="rgba(255,255,255,0.12)" strokeWidth={strokeWidth} fill="none" />
+                          <Circle
+                            cx={circleSize / 2}
+                            cy={circleSize / 2}
+                            r={radius}
+                            stroke={status.color}
+                            strokeWidth={strokeWidth}
+                            fill="none"
+                            strokeDasharray={`${circumference} ${circumference}`}
+                            strokeDashoffset={dashOffset}
+                            strokeLinecap="round"
+                            originX={circleSize / 2}
+                            originY={circleSize / 2}
+                            rotation={-90}
+                          />
+                        </Svg>
+                        <View className="items-center justify-center rounded-full px-3 py-2" style={{ minWidth: 74, backgroundColor: 'rgba(10,22,40,0.72)' }}>
+                          <Text className="text-3xl font-bold" style={{ color: officialTotal === null ? '#FFFFFF' : status.color }}>
+                            {officialTotal === null ? '--' : officialTotal.toFixed(1)}
+                          </Text>
+                          <Text className="text-xs text-af-silver">{officialTotal === null ? (walkPass ? 'Walk pass' : 'Walk fail') : '/ 100'}</Text>
+                        </View>
+                      </View>
+                      <View className="mt-2 flex-row items-center rounded-full px-3 py-1.5" style={{ backgroundColor: `${status.color}20` }}>
+                        <Ionicons name={status.icon} size={15} color={status.color} />
+                        <Text style={{ color: status.color }} className="ml-2 text-xs font-bold">{status.label}</Text>
+                      </View>
+                    </View>
 
-          <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
-            {isWide ? (
-              <>
-                <View className="mt-6 flex-row items-start" style={{ gap: 16 }}>
-                  <View style={{ flex: 1 }}>{renderAudioCard()}</View>
-                  <View style={{ flex: 1 }}>{metricsCard}</View>
-                  <View style={{ flex: 1 }}>{bodyCompCard}</View>
+                    <View className="flex-1">
+                      <ComponentScoreBar label="WHtR" value={scores.waist} max={20} theme={THEMES.whtR} onPress={() => scrollToSection('bodycomp')} />
+                      <ComponentScoreBar label="Strength" value={scores.strength} max={15} theme={THEMES.strength} onPress={() => scrollToSection('strength')} />
+                      <ComponentScoreBar label="Core" value={scores.core} max={15} theme={THEMES.core} onPress={() => scrollToSection('core')} />
+                      <ComponentScoreBar label="Cardio" value={cardioTest === 'walk_2k' ? (walkPass ? 50 : 0) : scores.cardio} max={50} theme={THEMES.cardio} isPassFail={cardioTest === 'walk_2k'} onPress={() => scrollToSection('cardio')} />
+                    </View>
+                  </View>
                 </View>
-                <View className="mt-6 flex-row items-start" style={{ gap: 16 }}>
-                  <View style={{ flex: 1 }}>{strengthCard}</View>
-                  <View style={{ flex: 1 }}>{coreCard}</View>
-                  <View style={{ flex: 1 }}>{cardioCard}</View>
-                </View>
-              </>
-            ) : (
-              <>
+              </View>
+
+              <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }} className="px-6">
                 {renderAudioCard('mt-6')}
                 <View className="mt-6">{metricsCard}</View>
                 <View className="mt-6">{bodyCompCard}</View>
                 <View className="mt-6">{strengthCard}</View>
                 <View className="mt-6">{coreCard}</View>
                 <View className="mt-6">{cardioCard}</View>
-              </>
-            )}
-          </View>
+              </View>
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
