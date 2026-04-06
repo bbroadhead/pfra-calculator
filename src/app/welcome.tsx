@@ -14,9 +14,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface TutorialSlide {
   id: string;
-  icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
+  icon?: React.ElementType;
+  image?: React.ReactNode;
+  iconColor?: string;
+  iconBg?: string;
   title: string;
   description: string;
   features: string[];
@@ -116,10 +117,10 @@ function SlideItem({ item, index, currentIndex }: { item: TutorialSlide; index: 
         entering={FadeInUp.delay(200).springify()}
         className={cn(
           "w-28 h-28 rounded-full items-center justify-center mb-8",
-          item.iconBg
+          item.iconBg ?? "bg-white/10"
         )}
       >
-        <Icon size={56} color={item.iconColor} />
+        {item.image ?? (Icon ? <Icon size={56} color={item.iconColor ?? "#FFFFFF"} /> : null)}
       </Animated.View>
 
       <Animated.Text

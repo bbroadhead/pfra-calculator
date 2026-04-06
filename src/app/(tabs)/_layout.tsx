@@ -9,6 +9,9 @@ const Tabs = withLayoutContext(Navigator);
 
 function TabsInner() {
   const { swipeEnabled } = useTabSwipe();
+  const renderTabIcon = (name: React.ComponentProps<typeof Ionicons>["name"]) => ({ color }: { color: string }) => (
+    <Ionicons name={name} size={22} color={color} />
+  );
 
   return (
     <Tabs
@@ -33,9 +36,6 @@ function TabsInner() {
           alignItems: "center",
           paddingVertical: 4,
         },
-        tabBarIconStyle: {
-          marginBottom: -2,
-        },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "600",
@@ -51,45 +51,35 @@ function TabsInner() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home-outline" size={22} color={color} />
-          ),
+          tabBarIcon: renderTabIcon("home-outline"),
         }}
       />
       <Tabs.Screen
         name="workouts"
         options={{
           title: "Workouts",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="barbell-outline" size={22} color={color} />
-          ),
+          tabBarIcon: renderTabIcon("barbell-outline"),
         }}
       />
       <Tabs.Screen
         name="attendance"
         options={{
           title: "Attendance",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="checkbox-outline" size={22} color={color} />
-          ),
+          tabBarIcon: renderTabIcon("checkbox-outline"),
         }}
       />
       <Tabs.Screen
         name="calculator"
         options={{
           title: "Calculator",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="calculator-outline" size={22} color={color} />
-          ),
+          tabBarIcon: renderTabIcon("calculator-outline"),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person-outline" size={22} color={color} />
-          ),
+          tabBarIcon: renderTabIcon("person-outline"),
         }}
       />
     </Tabs>
