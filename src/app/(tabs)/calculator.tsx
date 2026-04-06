@@ -9,7 +9,6 @@ import * as FileSystem from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import Svg, { Circle } from 'react-native-svg';
-import { jsPDF } from 'jspdf';
 
 import SmartSlider from '@/components/SmartSlider';
 import {
@@ -903,7 +902,26 @@ export default function CalculatorScreen() {
     </html>
   `;
 
-  const saveCalculatorPdfOnWeb = async (filename: string) => {
+  const saveCalculatorPdfOnWeb = async () => {
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=900');
+    if (!printWindow) {
+      return;
+    }
+
+    const html = buildCalculatorPdfHtml();
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    await new Promise<void>((resolve) => {
+      printWindow.onload = () => resolve();
+      setTimeout(() => resolve(), 500);
+    });
+
+    printWindow.focus();
+    printWindow.print();
+
+    /*
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
     pdf.setFillColor(10, 22, 40);
     pdf.rect(0, 0, 792, 612, 'F');
@@ -981,8 +999,8 @@ export default function CalculatorScreen() {
         pdf.text(line, x + 14, y + 38 + lineIndex * 15, { maxWidth: 292 });
       });
     });
-
     pdf.save(filename);
+    */
   };
 
   const saveCalculatorResults = async () => {
@@ -995,7 +1013,7 @@ export default function CalculatorScreen() {
       const filename = `${fileStem}.pdf`;
 
       if (Platform.OS === 'web') {
-        await saveCalculatorPdfOnWeb(filename);
+        await saveCalculatorPdfOnWeb();
       } else {
         const file = await Print.printToFileAsync({ html, base64: false });
         const fileUri = `${FileSystem.documentDirectory}${filename}`;
