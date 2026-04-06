@@ -903,23 +903,31 @@ export default function CalculatorScreen() {
   `;
 
   const saveCalculatorPdfOnWeb = async () => {
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=900');
+    const html = buildCalculatorPdfHtml();
+    const blob = new Blob([html], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    const printWindow = window.open(blobUrl, '_blank', 'width=1200,height=900');
     if (!printWindow) {
+      URL.revokeObjectURL(blobUrl);
       return;
     }
 
-    const html = buildCalculatorPdfHtml();
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-
     await new Promise<void>((resolve) => {
-      printWindow.onload = () => resolve();
-      setTimeout(() => resolve(), 500);
-    });
+      let hasPrinted = false;
+      const finalize = () => {
+        if (hasPrinted) {
+          return;
+        }
+        hasPrinted = true;
+        printWindow.focus();
+        printWindow.print();
+        resolve();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+      };
 
-    printWindow.focus();
-    printWindow.print();
+      printWindow.onload = finalize;
+      setTimeout(finalize, 1200);
+    });
 
     /*
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
