@@ -10,20 +10,20 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <link rel="manifest" href="/pfra-calculator/manifest.json" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="manifest" href="/manifest.json" />
         <link
           rel="apple-touch-icon"
           sizes="180x180"
           type="image/png"
-          href="apple-touch-icon.png"
+          href="/apple-touch-icon.png"
         />
-        <link rel="apple-touch-icon" href="/pfra-calculator/apple-touch-icon.png" />
         {/* iOS PWA support */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="PFRA Calculator" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="theme-color" content="#001F5C" />
+        <meta name="theme-color" content="#0A1628" />
         {/* 
           Disable body scrolling on web. This makes ScrollView components work closer to how they do on native. 
           However, body scrolling is often nice to have for mobile web. If you want to enable it, remove this line.
@@ -40,11 +40,27 @@ export default function Root({ children }: { children: React.ReactNode }) {
 }
 
 const responsiveBackground = `
-body {
-  background-color: #fff;
+html {
+  background-color: #0A1628;
 }
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #000;
-  }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #0A1628;
+  overscroll-behavior-y: none;
+}
+body, #root {
+  min-height: 100vh;
+  background-color: #0A1628;
+}
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background-color: #0A1628;
+  pointer-events: none;
+  z-index: 2147483647;
 }`;

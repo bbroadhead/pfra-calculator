@@ -10,7 +10,9 @@
     "web": {
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png",
-      "output": "static"
+      "output": "static",
+      "themeColor": "#0A1628",
+      "backgroundColor": "#0A1628"
     },
     "ios": {
       "supportsTablet": true
@@ -20,7 +22,6 @@
     },
     "plugins": ["expo-router"],
     "experiments": {
-      "baseUrl": "/pfra-calculator",
       "typedRoutes": true
     }
   }
